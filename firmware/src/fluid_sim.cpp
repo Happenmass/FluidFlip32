@@ -1,6 +1,2 @@
-// fluid_sim.cpp — host-portable FLIP fluid simulation (stub)
-// Full implementation added in Task 4.
-
-#ifdef NATIVE_BUILD_STUB
-int main() { return 0; }
-#endif
+// stub: real implementation lands in Task 2
+void __fluid_sim_stub_placeholder() {}
