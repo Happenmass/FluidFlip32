@@ -331,8 +331,34 @@ void FlipFluid::solveIncompressibility(int numIters, float dt,
     }
   }
 }
-void FlipFluid::showParticles() {}
-void FlipFluid::simulate(float, float, float, float, int, int, float, bool) {}
+void FlipFluid::showParticles() {
+  for (int i = 0; i < numParticles_; ++i) {
+    int xi = static_cast<int>(std::floor(particlePos_[2 * i]));
+    int yi = static_cast<int>(std::floor(particlePos_[2 * i + 1]));
+    if (xi >= 0 && xi < kCellsX && yi >= 0 && yi < kCellsY) {
+      cellType_[xi * kCellsY + yi] = CellType::Fluid;
+    }
+  }
+}
+void FlipFluid::simulate(float dt, float xGravity, float yGravity, float flipRatio,
+                         int numPressureIters, int numParticleIters,
+                         float overRelaxation, bool compensateDrift) {
+  // Match Rust reference: clear cellType to Air at start of each substep.
+  for (int i = 0; i < kCellsX * kCellsY; ++i) {
+    if (cellType_[i] != CellType::Solid) cellType_[i] = CellType::Air;
+  }
+
+  integrateParticles(dt, xGravity, yGravity);
+  pushParticlesApart(numParticleIters);
+  handleParticleCollisions();
+  pushParticlesApart(numParticleIters);
+  handleParticleCollisions();
+  transferVelocities(true, flipRatio);
+  updateParticleDensity();
+  solveIncompressibility(numPressureIters, dt, overRelaxation, compensateDrift);
+  transferVelocities(false, flipRatio);
+  showParticles();
+}
 
 Scene::Scene() : xGravity_(0.0f), yGravity_(0.0f) {}
 
