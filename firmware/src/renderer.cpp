@@ -51,11 +51,13 @@ void Renderer::draw(const Scene::OutputGrid& grid) {
   // Center the visible grid vertically. 16 rows × 8 px = 128 px → 7 px letterbox.
   const int xOff = 0;
   const int yOff = (M5.Display.height() - kVisibleCellsY * kCellPixelSize) / 2;
-
-  uint16_t* buf = static_cast<uint16_t*>(sprite_.getBuffer());
   const int spriteW = sprite_.width();
   const int spriteH = sprite_.height();
 
+  // readPixel/writePixel return/take native RGB565 — LovyanGFX handles any
+  // byte-swap internally based on sprite/display config. Direct getBuffer()
+  // access works too but requires matching the panel's swap setting; the API
+  // path is correct everywhere and fast enough for our cell counts.
   for (int y = 0; y < kVisibleCellsY; ++y) {
     for (int x = 0; x < kVisibleCellsX; ++x) {
       uint8_t count = grid[y][x];
@@ -71,9 +73,9 @@ void Renderer::draw(const Scene::OutputGrid& grid) {
       const int ys = std::max(y0, 0);
 
       for (int py = ys; py < y1; ++py) {
-        uint16_t* row = buf + py * spriteW;
         for (int px = xs; px < x1; ++px) {
-          row[px] = blend565(row[px], color, kFluidAlpha);
+          uint16_t bgPx = sprite_.readPixel(px, py);
+          sprite_.writePixel(px, py, blend565(bgPx, color, kFluidAlpha));
         }
       }
     }
