@@ -56,34 +56,47 @@ void test_simulate_no_nans_after_many_steps(void) {
 void test_apply_radial_impulse_pushes_particles_outward(void) {
   gScene.setup(kDefaultParticles);
   gScene.setGravity(0.0f, 0.0f);
-  // Run one step so cellType is populated.
-  gScene.simulate();
+  // Run a few steps so velocities settle to ~zero.
+  for (int step = 0; step < 5; ++step) gScene.simulate();
+
+  // Snapshot kinetic energy before impulse (sum of squared velocities).
+  // We don't have a direct accessor, so we approximate by re-running the
+  // sim with no impulse and comparing visible-cell distribution shifts.
   Scene::OutputGrid before;
   gScene.getOutput(before);
+
   gScene.applyRadialImpulse(kImpulseCenterX, kImpulseCenterY,
                             kImpulseStrength, kImpulseRadius);
-  // Run a few steps to let velocities translate to positions.
-  for (int step = 0; step < 10; ++step) gScene.simulate();
+  // Step forward; particles within impulse radius should move outward.
+  for (int step = 0; step < 8; ++step) gScene.simulate();
   Scene::OutputGrid after;
   gScene.getOutput(after);
-  // Center cell's neighborhood should have *fewer* fluid cells than before
-  // because particles dispersed outward.
-  int beforeCount = 0, afterCount = 0;
-  // Count fluid cells in a 5×5 box centered on (impulseCenterX-1, impulseCenterY-1)
-  // in visible-grid coords (because visible[y][x] maps to internal [y+1][x+1]).
+
+  // Compare an outer ring (cells at distance ~3..5 from impulse center) with
+  // an inner core (distance 0..1). After an outward impulse, the outer ring
+  // should pick up *at least* one fluid cell that wasn't there before, OR
+  // the inner core should *lose* at least one. (Either side proves motion.)
+  int innerBefore = 0, innerAfter = 0;
+  int outerBefore = 0, outerAfter = 0;
   int cxv = static_cast<int>(kImpulseCenterX) - 1;
   int cyv = static_cast<int>(kImpulseCenterY) - 1;
-  for (int dy = -2; dy <= 2; ++dy) {
-    for (int dx = -2; dx <= 2; ++dx) {
+  for (int dy = -5; dy <= 5; ++dy) {
+    for (int dx = -5; dx <= 5; ++dx) {
       int x = cxv + dx, y = cyv + dy;
       if (x < 0 || x >= kVisibleCellsX || y < 0 || y >= kVisibleCellsY) continue;
-      if (before[y][x]) ++beforeCount;
-      if (after[y][x])  ++afterCount;
+      int r2 = dx * dx + dy * dy;
+      if (r2 <= 1) {
+        if (before[y][x]) ++innerBefore;
+        if (after[y][x])  ++innerAfter;
+      } else if (r2 >= 9 && r2 <= 25) {
+        if (before[y][x]) ++outerBefore;
+        if (after[y][x])  ++outerAfter;
+      }
     }
   }
-  // Expect at least some movement; allow either direction since particles can also
-  // re-cluster. Looser invariant: total fluid cell count unchanged in magnitude.
-  TEST_ASSERT_TRUE(beforeCount >= 0 && afterCount >= 0);
+  // Either inner shrunk or outer grew (or both). Pure no-op is forbidden.
+  bool moved = (innerAfter < innerBefore) || (outerAfter > outerBefore);
+  TEST_ASSERT_TRUE_MESSAGE(moved, "applyRadialImpulse produced no measurable motion");
 }
 
 void test_particle_add_clamps_to_max(void) {

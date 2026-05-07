@@ -21,6 +21,7 @@ void setup() {
   Serial.begin(115200);
   delay(200);
   Serial.println("[boot] M5StickS3 FluidSim starting");
+  M5.BtnB.setHoldThresh(1000);
 
   gRenderer.begin();
   gInput.begin();

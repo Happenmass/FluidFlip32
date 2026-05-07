@@ -42,7 +42,7 @@ InputState InputController::poll() {
   }
 
   st.btnA_pressed = M5.BtnA.wasPressed();
-  st.btnB_pressed = M5.BtnB.wasPressed();
+  st.btnB_pressed = M5.BtnB.wasClicked();
   st.btnB_long    = M5.BtnB.wasReleasedAfterHold();
   return st;
 }
