@@ -16,8 +16,19 @@ constexpr int kVisibleCellsY = 16;
 constexpr float kSimWidth  = static_cast<float>(kCellsX);
 constexpr float kSimHeight = static_cast<float>(kCellsY);
 
-// Pixel size of one cell when rendered.
+// Pixel size of one cell on the simulation grid (collision spacing).
 constexpr int kCellPixelSize = 8;
+
+// Render size of one cell — slightly larger than the collision spacing so
+// adjacent cells overlap, giving a soft blob look when alpha-blended.
+// 9 px = +12.5% over the 8 px collision spacing.
+constexpr int kCellRenderSize = 9;
+
+// Fluid alpha for translucent rendering. 0 = invisible, 255 = opaque.
+// 160 ≈ 63% opacity, which lets the deep-blue background bleed through and
+// makes overlap regions visibly more saturated (since each pixel can be
+// blended twice when neighboring cells overlap).
+constexpr uint8_t kFluidAlpha = 160;
 
 // Particles. Sized so default fill is ~30% of visible volume (ref.jpg look).
 constexpr int kMaxParticles     = 600;
