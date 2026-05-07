@@ -4,22 +4,24 @@
 
 namespace fluidsim {
 
-// Grid: 40×22 visible cells + 1-cell SOLID border on each side.
-constexpr int kCellsX = 42;
-constexpr int kCellsY = 24;
+// Grid: 30×16 visible cells + 1-cell SOLID border on each side.
+// 8px cells × 30 = 240 (LCD width). 8px × 16 = 128 (7px vertical letterbox).
+// Larger cells per ref.jpg's chunky pixel-art aesthetic.
+constexpr int kCellsX = 32;
+constexpr int kCellsY = 18;
 
-constexpr int kVisibleCellsX = 40;
-constexpr int kVisibleCellsY = 22;
+constexpr int kVisibleCellsX = 30;
+constexpr int kVisibleCellsY = 16;
 
 constexpr float kSimWidth  = static_cast<float>(kCellsX);
 constexpr float kSimHeight = static_cast<float>(kCellsY);
 
 // Pixel size of one cell when rendered.
-constexpr int kCellPixelSize = 6;
+constexpr int kCellPixelSize = 8;
 
-// Particles.
-constexpr int kMaxParticles     = 1200;
-constexpr int kDefaultParticles = 800;
+// Particles. Sized so default fill is ~30% of visible volume (ref.jpg look).
+constexpr int kMaxParticles     = 600;
+constexpr int kDefaultParticles = 250;
 
 // Solver iterations and tunables (match Rust reference).
 constexpr int   kPressureIters    = 10;
@@ -38,15 +40,15 @@ constexpr float kParticleRadius = 0.5f;
 // Gravity scaling: g-units (from IMU) → sim cells / s². Tune at bringup.
 constexpr float kGravityScale = 9.81f * 6.0f;
 
-// Radial impulse (BtnA explosion).
-constexpr float kImpulseCenterX = 21.0f;
-constexpr float kImpulseCenterY = 12.0f;
-constexpr float kImpulseRadius  = 12.0f;
+// Radial impulse (BtnA explosion). Centered on the visible grid.
+constexpr float kImpulseCenterX = 16.0f;   // (kCellsX) / 2
+constexpr float kImpulseCenterY = 9.0f;    // (kCellsY) / 2
+constexpr float kImpulseRadius  = 8.0f;
 constexpr float kImpulseStrength = 60.0f;  // tune at bringup
 
 // Shake detection.
 constexpr float kShakeMagnitudeG  = 1.8f;
 constexpr int   kShakeFramesNeeded = 8;
-constexpr int   kShakeAddParticles = 400;
+constexpr int   kShakeAddParticles = 100;
 
 }  // namespace fluidsim
