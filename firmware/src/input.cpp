@@ -14,19 +14,27 @@ void InputController::begin() {
 InputState InputController::poll() {
   InputState st{};
 
-  // IMU read. M5Unified returns m/s² when IMU support is internal_unit_g = false,
-  // but the typical Accel API returns g-units; consult the actual return value.
+  // IMU read in g-units.
   float ax = lastAx_, ay = lastAy_, az = lastAz_;
   if (M5.Imu.getAccel(&ax, &ay, &az)) {
     lastAx_ = ax; lastAy_ = ay; lastAz_ = az;
   }
 
-  // Axis remap: M5StickC family with rotation=1 (landscape) typically has
-  // screen-X = +imuY, screen-Y = -imuX (verify in Task 15 bringup).
-  // For now, ship a sane default; the bringup task will Serial-log raw values
-  // and fix signs.
-  float gx_screen =  ay;
-  float gy_screen = -ax;
+  // StickS3's IMU is mounted with the device's long edge along the IMU's
+  // Y axis (StickC Plus family had it along X). Swap so the rest of the
+  // mapping can use StickC Plus convention. Reference:
+  // ../claude-desktop-buddy/src/main.cpp:392-399
+  if (M5.getBoard() == m5::board_t::board_M5StickS3) {
+    float t = ax; ax = ay; ay = t;
+  }
+
+  // Landscape (rotation=1) mapping after the swap:
+  //   screen-X (long edge of LCD, horizontal) = +ax (raw long-edge axis)
+  //   screen-Y (short edge of LCD, vertical)  = +ay (raw short-edge axis)
+  // Sign correctness depends on physical mounting; flip either line if
+  // tilt direction feels inverted on hardware.
+  float gx_screen = ax;
+  float gy_screen = ay;
   st.gravityX = gx_screen * kGravityScale;
   st.gravityY = gy_screen * kGravityScale;
 
