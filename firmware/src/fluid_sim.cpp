@@ -389,8 +389,46 @@ void Scene::simulate() {
                   kPressureIters, kParticleIters, kOverRelaxation, true);
 }
 
-void Scene::applyRadialImpulse(float, float, float, float) {}
-void Scene::particleAdd(int, int) {}
+void Scene::applyRadialImpulse(float cx, float cy, float strength, float radius) {
+  for (int i = 0; i < fluid_.numParticles(); ++i) {
+    float dx = fluid_.particlePosX(i) - cx;
+    float dy = fluid_.particlePosY(i) - cy;
+    float d  = std::sqrt(dx * dx + dy * dy);
+    if (d >= radius) continue;
+    float falloff = 1.0f - d / radius;
+    float invD    = 1.0f / std::max(d, 0.5f);
+    fluid_.addParticleVel(i, dx * invD * strength * falloff,
+                             dy * invD * strength * falloff);
+  }
+}
+void Scene::particleAdd(int delta, int maxCap) {
+  int current = fluid_.numParticles();
+  int target  = current + delta;
+  if (target < 0)      target = 0;
+  if (target > maxCap) target = maxCap;
+  if (target > current) {
+    // New particles spawn at existing block extension. Place them in a small
+    // grid above the current top, capped to bounds.
+    const float r  = kParticleRadius;
+    const float dx = 2.0f * r;
+    const float dy = 1.7320508f * r;
+    int placed = current;
+    for (int j = 0; placed < target; ++j) {
+      float y = 1.0f + r + dy * j;
+      if (y > kCellsY - 1.0f - r) break;
+      for (int i = 0; placed < target; ++i) {
+        float x = 1.0f + r + dx * i + (j % 2 == 0 ? 0.0f : r);
+        if (x > kCellsX - 1.0f - r) break;
+        fluid_.setParticlePos(placed, x, y);
+        fluid_.setParticleVel(placed, 0.0f, 0.0f);
+        ++placed;
+      }
+    }
+    fluid_.setNumParticles(placed);
+  } else {
+    fluid_.setNumParticles(target);
+  }
+}
 
 void Scene::getOutput(OutputGrid& out) const {
   for (int y = 0; y < kVisibleCellsY; ++y) {
