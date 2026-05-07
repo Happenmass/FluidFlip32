@@ -253,8 +253,84 @@ void FlipFluid::transferVelocities(bool toGrid, float flipRatio) {
     }
   }
 }
-void FlipFluid::updateParticleDensity() {}
-void FlipFluid::solveIncompressibility(int, float, float, bool) {}
+void FlipFluid::updateParticleDensity() {
+  const int   n  = kCellsY;
+  const float h  = 1.0f;
+  const float h1 = 1.0f / h;
+  const float h2 = 0.5f * h;
+  std::memset(particleDensity_, 0, sizeof(particleDensity_));
+
+  for (int i = 0; i < numParticles_; ++i) {
+    float x = particlePos_[2 * i];
+    float y = particlePos_[2 * i + 1];
+    x = clampf(x, h, (kCellsX - 1) * h);
+    y = clampf(y, h, (kCellsY - 1) * h);
+    int x0 = static_cast<int>(std::floor((x - h2) * h1));
+    float tx = ((x - h2) - x0 * h) * h1;
+    int x1 = std::min(x0 + 1, kCellsX - 2);
+    int y0 = static_cast<int>(std::floor((y - h2) * h1));
+    float ty = ((y - h2) - y0 * h) * h1;
+    int y1 = std::min(y0 + 1, kCellsY - 2);
+    float sx = 1.0f - tx;
+    float sy = 1.0f - ty;
+    if (x0 < kCellsX && y0 < kCellsY) particleDensity_[x0 * n + y0] += sx * sy;
+    if (x1 < kCellsX && y0 < kCellsY) particleDensity_[x1 * n + y0] += tx * sy;
+    if (x1 < kCellsX && y1 < kCellsY) particleDensity_[x1 * n + y1] += tx * ty;
+    if (x0 < kCellsX && y1 < kCellsY) particleDensity_[x0 * n + y1] += sx * ty;
+  }
+
+  if (particleRestDensity_ == 0.0f) {
+    float sum = 0.0f;
+    int numFluidCells = 0;
+    for (int i = 0; i < kCellsX * kCellsY; ++i) {
+      if (cellType_[i] == CellType::Fluid) {
+        sum += particleDensity_[i];
+        ++numFluidCells;
+      }
+    }
+    if (numFluidCells > 0) particleRestDensity_ = sum / numFluidCells;
+  }
+}
+void FlipFluid::solveIncompressibility(int numIters, float dt,
+                                       float overRelaxation, bool compensateDrift) {
+  std::memset(p_, 0, sizeof(p_));
+  std::memcpy(prevU_, u_, sizeof(u_));
+  std::memcpy(prevV_, v_, sizeof(v_));
+  const int   n  = kCellsY;
+  const float cp = kDensity * 1.0f / dt;  // h = 1
+
+  for (int iter = 0; iter < numIters; ++iter) {
+    for (int i = 1; i < kCellsX - 1; ++i) {
+      for (int j = 1; j < kCellsY - 1; ++j) {
+        if (cellType_[i * n + j] != CellType::Fluid) continue;
+        int center = i * n + j;
+        int left   = (i - 1) * n + j;
+        int right  = (i + 1) * n + j;
+        int bottom = i * n + j - 1;
+        int top    = i * n + j + 1;
+        float sx0 = s_[left];
+        float sx1 = s_[right];
+        float sy0 = s_[bottom];
+        float sy1 = s_[top];
+        float sSum = sx0 + sx1 + sy0 + sy1;
+        if (sSum == 0.0f) continue;
+        float div = u_[right] - u_[center] + v_[top] - v_[center];
+        if (particleRestDensity_ > 0.0f && compensateDrift) {
+          float k = 1.0f;
+          float compression = particleDensity_[i * n + j] - particleRestDensity_;
+          if (compression > 0.0f) div -= k * compression;
+        }
+        float pVal = -div / sSum;
+        pVal *= overRelaxation;
+        p_[center] += cp * pVal;
+        u_[center] -= sx0 * pVal;
+        u_[right]  += sx1 * pVal;
+        v_[center] -= sy0 * pVal;   // bug fix: Rust source had self.u[center] += sy0 * p
+        v_[top]    += sy1 * pVal;
+      }
+    }
+  }
+}
 void FlipFluid::showParticles() {}
 void FlipFluid::simulate(float, float, float, float, int, int, float, bool) {}
 
