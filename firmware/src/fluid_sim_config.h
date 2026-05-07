@@ -41,9 +41,12 @@ constexpr float kParticleRadius = 0.5f;
 constexpr float kGravityScale = 9.81f * 6.0f;
 
 // Radial impulse (BtnA explosion). Centered on the visible grid.
+// Radius covers the full screen — distance from (16,9) to any visible
+// corner is ~17 cells; a slightly larger radius lets edge particles still
+// feel a (linearly-falloff) kick.
 constexpr float kImpulseCenterX = 16.0f;   // (kCellsX) / 2
 constexpr float kImpulseCenterY = 9.0f;    // (kCellsY) / 2
-constexpr float kImpulseRadius  = 8.0f;
-constexpr float kImpulseStrength = 60.0f;  // tune at bringup
+constexpr float kImpulseRadius  = 20.0f;
+constexpr float kImpulseStrength = 60.0f;
 
 }  // namespace fluidsim
