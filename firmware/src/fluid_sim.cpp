@@ -45,7 +45,14 @@ void FlipFluid::reset() {
 }
 
 // Stubs — implemented in subsequent tasks.
-void FlipFluid::integrateParticles(float, float, float) {}
+void FlipFluid::integrateParticles(float dt, float xGravity, float yGravity) {
+  for (int i = 0; i < numParticles_; ++i) {
+    particleVel_[2 * i]     += dt * xGravity;
+    particleVel_[2 * i + 1] += dt * yGravity;
+    particlePos_[2 * i]     += particleVel_[2 * i]     * dt;
+    particlePos_[2 * i + 1] += particleVel_[2 * i + 1] * dt;
+  }
+}
 void FlipFluid::pushParticlesApart(int) {}
 void FlipFluid::handleParticleCollisions() {}
 void FlipFluid::transferVelocities(bool, float) {}
