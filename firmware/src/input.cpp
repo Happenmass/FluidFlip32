@@ -21,16 +21,15 @@ InputState InputController::poll() {
   }
 
   // StickS3 in landscape rotation=1 (verified empirically on device):
-  //   raw ax → screen-X (horizontal), raw ay → screen-Y (vertical, +y = down).
-  // Held upright in landscape, raw ay ≈ +1g and raw ax ≈ 0, so particles
-  // settle along screen-Y as expected. If a single tilt direction feels
-  // reversed on hardware, flip the sign on just that line.
+  //   raw ax → screen-X (horizontal, +x = right): direct mapping.
+  //   raw ay → screen-Y (vertical, +y = down):    sign flipped — the IMU's
+  //     Y axis points up relative to the LCD's down direction.
   //
   // (Note: claude-desktop-buddy swaps ax/ay on StickS3 for its 1↔3
   // orientation-detection convention, not for 2D gravity mapping. Don't
   // copy that swap here — it rotates the gravity vector by 90°.)
-  float gx_screen = ax;
-  float gy_screen = ay;
+  float gx_screen =  ax;
+  float gy_screen = -ay;
   st.gravityX = gx_screen * kGravityScale;
   st.gravityY = gy_screen * kGravityScale;
 
