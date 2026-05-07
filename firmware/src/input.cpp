@@ -20,19 +20,15 @@ InputState InputController::poll() {
     lastAx_ = ax; lastAy_ = ay; lastAz_ = az;
   }
 
-  // StickS3's IMU is mounted with the device's long edge along the IMU's
-  // Y axis (StickC Plus family had it along X). Swap so the rest of the
-  // mapping can use StickC Plus convention. Reference:
-  // ../claude-desktop-buddy/src/main.cpp:392-399
-  if (M5.getBoard() == m5::board_t::board_M5StickS3) {
-    float t = ax; ax = ay; ay = t;
-  }
-
-  // Landscape (rotation=1) mapping after the swap:
-  //   screen-X (long edge of LCD, horizontal) = +ax (raw long-edge axis)
-  //   screen-Y (short edge of LCD, vertical)  = +ay (raw short-edge axis)
-  // Sign correctness depends on physical mounting; flip either line if
-  // tilt direction feels inverted on hardware.
+  // StickS3 in landscape rotation=1 (verified empirically on device):
+  //   raw ax → screen-X (horizontal), raw ay → screen-Y (vertical, +y = down).
+  // Held upright in landscape, raw ay ≈ +1g and raw ax ≈ 0, so particles
+  // settle along screen-Y as expected. If a single tilt direction feels
+  // reversed on hardware, flip the sign on just that line.
+  //
+  // (Note: claude-desktop-buddy swaps ax/ay on StickS3 for its 1↔3
+  // orientation-detection convention, not for 2D gravity mapping. Don't
+  // copy that swap here — it rotates the gravity vector by 90°.)
   float gx_screen = ax;
   float gy_screen = ay;
   st.gravityX = gx_screen * kGravityScale;
