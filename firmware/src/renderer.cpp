@@ -2,11 +2,20 @@
 
 namespace fluidsim {
 
-// Colors tuned to match ref.jpg: deep ocean blue background, cyan fluid body
-// with a brighter highlight on the surface (cells whose top neighbor is air).
-constexpr uint16_t kColorBg           = 0x0010;  // deep blue
-constexpr uint16_t kColorFluidBody    = 0x07FF;  // cyan
-constexpr uint16_t kColorFluidSurface = 0xAFFF;  // pale cyan (surface highlight)
+// Density-tiered color palette (RGB565). Indexed by particle count per cell,
+// clamped at 4. Linearly blends from deep-blue background → cyan, with a
+// brighter highlight for compressed/dense regions. This gives the fluid the
+// "crystal clear seawater" look from ref.jpg: surface cells (count=1) read as
+// translucent, settled body (count=2-3) as cyan, splash cores (count≥4) bright.
+//
+// Computed with bg=(R=0, G=0, B=16/31), cyan=(R=0, G=63/63, B=31/31).
+constexpr uint16_t kDensityColors[5] = {
+  0x0010,  // 0: deep blue background
+  0x0214,  // 1: ~25% cyan (translucent water surface)
+  0x03F8,  // 2: ~50% cyan (settled body)
+  0x05FB,  // 3: ~75% cyan
+  0x07FF,  // 4+: full cyan (compressed)
+};
 
 Renderer::Renderer() : sprite_(&M5.Display), initialized_(false) {}
 
@@ -19,7 +28,7 @@ void Renderer::begin() {
 
 void Renderer::draw(const Scene::OutputGrid& grid) {
   if (!initialized_) return;
-  sprite_.fillScreen(kColorBg);
+  sprite_.fillScreen(kDensityColors[0]);
 
   // Center the visible grid vertically. 16 rows × 8 px = 128 px → 7 px letterbox.
   const int xOff = 0;
@@ -27,14 +36,12 @@ void Renderer::draw(const Scene::OutputGrid& grid) {
 
   for (int y = 0; y < kVisibleCellsY; ++y) {
     for (int x = 0; x < kVisibleCellsX; ++x) {
-      if (!grid[y][x]) continue;
-      // Surface cell: has air immediately above (or sits on the visible top row).
-      // This gives the fluid a bright "waterline" highlight matching the ref.
-      bool surface = (y == 0) || !grid[y - 1][x];
-      uint16_t color = surface ? kColorFluidSurface : kColorFluidBody;
+      uint8_t count = grid[y][x];
+      if (count == 0) continue;  // background already painted
+      uint8_t tier = count >= 4 ? 4 : count;
       sprite_.fillRect(xOff + x * kCellPixelSize,
                        yOff + y * kCellPixelSize,
-                       kCellPixelSize, kCellPixelSize, color);
+                       kCellPixelSize, kCellPixelSize, kDensityColors[tier]);
     }
   }
   sprite_.pushSprite(0, 0);

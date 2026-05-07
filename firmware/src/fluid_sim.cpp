@@ -431,11 +431,17 @@ void Scene::particleAdd(int delta, int maxCap) {
 }
 
 void Scene::getOutput(OutputGrid& out) const {
-  for (int y = 0; y < kVisibleCellsY; ++y) {
-    for (int x = 0; x < kVisibleCellsX; ++x) {
-      // Visible cells start at index 1 in both dimensions.
-      out[y][x] = fluid_.cellType(x + 1, y + 1) == CellType::Fluid;
-    }
+  // Tally particle count per visible cell. The renderer tiers this into a
+  // density-based color gradient so the fluid surface reads as translucent
+  // and dense regions look opaque/bright (matches ref.jpg's look).
+  std::memset(out, 0, sizeof(OutputGrid));
+  const int n = fluid_.numParticles();
+  for (int i = 0; i < n; ++i) {
+    int xi = static_cast<int>(std::floor(fluid_.particlePosX(i))) - 1;  // visible coords
+    int yi = static_cast<int>(std::floor(fluid_.particlePosY(i))) - 1;
+    if (xi < 0 || xi >= kVisibleCellsX) continue;
+    if (yi < 0 || yi >= kVisibleCellsY) continue;
+    if (out[yi][xi] < 255) ++out[yi][xi];
   }
 }
 

@@ -87,8 +87,9 @@ class Scene {
   void particleAdd(int delta, int maxCap);
   int  numParticles() const { return fluid_.numParticles(); }
 
-  // Output: bool grid of visible 40×22 cells; true = FLUID_CELL.
-  using OutputGrid = bool[kVisibleCellsY][kVisibleCellsX];
+  // Output: per-visible-cell particle count, saturated at 255.
+  // 0 = no fluid; 1+ = density tier (renderer maps to color gradient).
+  using OutputGrid = uint8_t[kVisibleCellsY][kVisibleCellsX];
   void getOutput(OutputGrid& out) const;
 
  private:
