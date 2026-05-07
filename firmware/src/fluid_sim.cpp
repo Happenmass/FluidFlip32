@@ -53,7 +53,77 @@ void FlipFluid::integrateParticles(float dt, float xGravity, float yGravity) {
     particlePos_[2 * i + 1] += particleVel_[2 * i + 1] * dt;
   }
 }
-void FlipFluid::pushParticlesApart(int) {}
+void FlipFluid::pushParticlesApart(int numIters) {
+  // Count particles per cell.
+  std::memset(numCellParticles_, 0, sizeof(numCellParticles_));
+  for (int i = 0; i < numParticles_; ++i) {
+    float x = particlePos_[2 * i];
+    float y = particlePos_[2 * i + 1];
+    int xi = clampi(static_cast<int>(std::floor(x)), 1, kCellsX - 2);
+    int yi = clampi(static_cast<int>(std::floor(y)), 1, kCellsY - 2);
+    numCellParticles_[xi * kCellsY + yi]++;
+  }
+
+  // Partial sums.
+  int first = 0;
+  for (int i = 0; i < kCellsX * kCellsY; ++i) {
+    first += numCellParticles_[i];
+    firstCellParticle_[i] = first;
+  }
+  firstCellParticle_[kCellsX * kCellsY] = first;  // guard
+
+  // Fill cells with particle indices.
+  for (int i = 0; i < numParticles_; ++i) {
+    float x = particlePos_[2 * i];
+    float y = particlePos_[2 * i + 1];
+    int xi = clampi(static_cast<int>(std::floor(x)), 1, kCellsX - 2);
+    int yi = clampi(static_cast<int>(std::floor(y)), 1, kCellsY - 2);
+    int cellNr = xi * kCellsY + yi;
+    firstCellParticle_[cellNr]--;
+    cellParticleIds_[firstCellParticle_[cellNr]] = i;
+  }
+
+  // Push apart.
+  const float minDist  = 2.0f * kParticleRadius;
+  const float minDist2 = minDist * minDist;
+  for (int iter = 0; iter < numIters; ++iter) {
+    for (int i = 0; i < numParticles_; ++i) {
+      float px = particlePos_[2 * i];
+      float py = particlePos_[2 * i + 1];
+      int pxi = static_cast<int>(std::floor(px));
+      int pyi = static_cast<int>(std::floor(py));
+      int x0 = std::max(pxi - 1, 0);
+      int y0 = std::max(pyi - 1, 0);
+      int x1 = std::min(pxi + 1, kCellsX - 1);
+      int y1 = std::min(pyi + 1, kCellsY - 1);
+      for (int xi = x0; xi <= x1; ++xi) {
+        for (int yi = y0; yi <= y1; ++yi) {
+          int cellNr = xi * kCellsY + yi;
+          int firstP = firstCellParticle_[cellNr];
+          int lastP  = firstCellParticle_[cellNr + 1];
+          for (int j = firstP; j < lastP; ++j) {
+            int id = cellParticleIds_[j];
+            if (id == i) continue;
+            float qx = particlePos_[2 * id];
+            float qy = particlePos_[2 * id + 1];
+            float dx = qx - px;
+            float dy = qy - py;
+            float d2 = dx * dx + dy * dy;
+            if (d2 > minDist2 || d2 == 0.0f) continue;
+            float d = std::sqrt(d2);
+            float s = 0.5f * (minDist - d) / d;
+            dx *= s;
+            dy *= s;
+            particlePos_[2 * i]      -= dx;
+            particlePos_[2 * i + 1]  -= dy;
+            particlePos_[2 * id]     += dx;
+            particlePos_[2 * id + 1] += dy;
+          }
+        }
+      }
+    }
+  }
+}
 void FlipFluid::handleParticleCollisions() {}
 void FlipFluid::transferVelocities(bool, float) {}
 void FlipFluid::updateParticleDensity() {}
