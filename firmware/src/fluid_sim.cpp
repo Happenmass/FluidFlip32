@@ -124,7 +124,22 @@ void FlipFluid::pushParticlesApart(int numIters) {
     }
   }
 }
-void FlipFluid::handleParticleCollisions() {}
+void FlipFluid::handleParticleCollisions() {
+  const float minX = 1.0f;
+  const float maxX = static_cast<float>(kCellsX) - 1.0f;
+  const float minY = 1.0f;
+  const float maxY = static_cast<float>(kCellsY) - 1.0f;
+  for (int i = 0; i < numParticles_; ++i) {
+    float x = particlePos_[2 * i];
+    float y = particlePos_[2 * i + 1];
+    if (x < minX) { x = minX; particleVel_[2 * i]     = 0.0f; }
+    if (x > maxX) { x = maxX; particleVel_[2 * i]     = 0.0f; }
+    if (y < minY) { y = minY; particleVel_[2 * i + 1] = 0.0f; }
+    if (y > maxY) { y = maxY; particleVel_[2 * i + 1] = 0.0f; }
+    particlePos_[2 * i]     = x;
+    particlePos_[2 * i + 1] = y;
+  }
+}
 void FlipFluid::transferVelocities(bool, float) {}
 void FlipFluid::updateParticleDensity() {}
 void FlipFluid::solveIncompressibility(int, float, float, bool) {}
