@@ -46,9 +46,4 @@ constexpr float kImpulseCenterY = 9.0f;    // (kCellsY) / 2
 constexpr float kImpulseRadius  = 8.0f;
 constexpr float kImpulseStrength = 60.0f;  // tune at bringup
 
-// Shake detection.
-constexpr float kShakeMagnitudeG  = 1.8f;
-constexpr int   kShakeFramesNeeded = 8;
-constexpr int   kShakeAddParticles = 100;
-
 }  // namespace fluidsim

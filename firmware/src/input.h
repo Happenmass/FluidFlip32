@@ -7,7 +7,6 @@ namespace fluidsim {
 struct InputState {
   float gravityX;     // sim cells / s²
   float gravityY;     // sim cells / s²
-  bool  shakeTriggered;
   bool  btnA_pressed;
   bool  btnB_pressed;
   bool  btnB_long;
@@ -20,7 +19,6 @@ class InputController {
   InputState poll();
 
  private:
-  int   shakeFrames_;
   float lastAx_, lastAy_, lastAz_;
 };
 

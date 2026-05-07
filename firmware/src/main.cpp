@@ -35,7 +35,6 @@ void loop() {
 
   gScene.setGravity(in.gravityX, in.gravityY);
 
-  if (in.shakeTriggered) gScene.particleAdd(kShakeAddParticles, kMaxParticles);
   if (in.btnA_pressed) {
     gScene.applyRadialImpulse(kImpulseCenterX, kImpulseCenterY,
                               kImpulseStrength, kImpulseRadius);
