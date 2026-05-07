@@ -140,7 +140,119 @@ void FlipFluid::handleParticleCollisions() {
     particlePos_[2 * i + 1] = y;
   }
 }
-void FlipFluid::transferVelocities(bool, float) {}
+void FlipFluid::transferVelocities(bool toGrid, float flipRatio) {
+  const int   n  = kCellsY;
+  const float h  = 1.0f;            // cell size = 1 (kSimWidth/kCellsX = 1)
+  const float h1 = 1.0f / h;
+  const float h2 = 0.5f * h;
+
+  if (toGrid) {
+    std::memcpy(prevU_, u_, sizeof(u_));
+    std::memcpy(prevV_, v_, sizeof(v_));
+    std::memset(du_, 0, sizeof(du_));
+    std::memset(dv_, 0, sizeof(dv_));
+    std::memset(u_,  0, sizeof(u_));
+    std::memset(v_,  0, sizeof(v_));
+
+    for (int i = 0; i < kCellsX * kCellsY; ++i) {
+      cellType_[i] = (s_[i] == 0.0f) ? CellType::Solid : CellType::Air;
+    }
+    for (int i = 0; i < numParticles_; ++i) {
+      float x = particlePos_[2 * i];
+      float y = particlePos_[2 * i + 1];
+      int xi = clampi(static_cast<int>(std::floor(x * h1)), 1, kCellsX - 2);
+      int yi = clampi(static_cast<int>(std::floor(y * h1)), 1, kCellsY - 2);
+      int cellNr = xi * n + yi;
+      if (cellType_[cellNr] == CellType::Air) cellType_[cellNr] = CellType::Fluid;
+    }
+  }
+
+  for (int component = 0; component < 2; ++component) {
+    float dx = (component == 0) ? 0.0f : h2;
+    float dy = (component == 0) ? h2   : 0.0f;
+    float* f     = (component == 0) ? u_     : v_;
+    float* prevF = (component == 0) ? prevU_ : prevV_;
+    float* d     = (component == 0) ? du_    : dv_;
+
+    for (int i = 0; i < numParticles_; ++i) {
+      float x = particlePos_[2 * i];
+      float y = particlePos_[2 * i + 1];
+      x = clampf(x, h, (kCellsX - 1) * h);
+      y = clampf(y, h, (kCellsY - 1) * h);
+
+      int x0 = std::min(static_cast<int>(std::floor((x - dx) * h1)), kCellsX - 2);
+      float tx = ((x - dx) - x0 * h) * h1;
+      int x1 = std::min(x0 + 1, kCellsX - 2);
+
+      int y0 = std::min(static_cast<int>(std::floor((y - dy) * h1)), kCellsY - 2);
+      float ty = ((y - dy) - y0 * h) * h1;
+      int y1 = std::min(y0 + 1, kCellsY - 2);
+
+      float sx = 1.0f - tx;
+      float sy = 1.0f - ty;
+
+      float d0 = sx * sy;
+      float d1 = tx * sy;
+      float d2 = tx * ty;
+      float d3 = sx * ty;
+
+      int nr0 = x0 * n + y0;
+      int nr1 = x1 * n + y0;
+      int nr2 = x1 * n + y1;
+      int nr3 = x0 * n + y1;
+
+      if (toGrid) {
+        float pv = particleVel_[2 * i + component];
+        f[nr0] += pv * d0;  d[nr0] += d0;
+        f[nr1] += pv * d1;  d[nr1] += d1;
+        f[nr2] += pv * d2;  d[nr2] += d2;
+        f[nr3] += pv * d3;  d[nr3] += d3;
+      } else {
+        int offset = (component == 0) ? n : 1;
+        float valid0 = (cellType_[nr0] != CellType::Air ||
+                       cellType_[nr0 - offset] != CellType::Air) ? 1.0f : 0.0f;
+        float valid1 = (cellType_[nr1] != CellType::Air ||
+                       cellType_[nr1 - offset] != CellType::Air) ? 1.0f : 0.0f;
+        float valid2 = (cellType_[nr2] != CellType::Air ||
+                       cellType_[nr2 - offset] != CellType::Air) ? 1.0f : 0.0f;
+        float valid3 = (cellType_[nr3] != CellType::Air ||
+                       cellType_[nr3 - offset] != CellType::Air) ? 1.0f : 0.0f;
+
+        float v = particleVel_[2 * i + component];
+        float dsum = valid0 * d0 + valid1 * d1 + valid2 * d2 + valid3 * d3;
+        if (dsum > 0.0f) {
+          float picV = (valid0 * d0 * f[nr0] + valid1 * d1 * f[nr1] +
+                        valid2 * d2 * f[nr2] + valid3 * d3 * f[nr3]) / dsum;
+          float corr = (valid0 * d0 * (f[nr0] - prevF[nr0]) +
+                        valid1 * d1 * (f[nr1] - prevF[nr1]) +
+                        valid2 * d2 * (f[nr2] - prevF[nr2]) +
+                        valid3 * d3 * (f[nr3] - prevF[nr3])) / dsum;
+          float flipV = v + corr;
+          particleVel_[2 * i + component] = (1.0f - flipRatio) * picV + flipRatio * flipV;
+        }
+      }
+    }
+
+    if (toGrid) {
+      const int total = kCellsX * kCellsY;
+      for (int i = 0; i < total; ++i) {
+        if (d[i] > 0.0f) f[i] /= d[i];
+      }
+      // Restore solid cells.
+      for (int i = 0; i < kCellsX; ++i) {
+        for (int j = 0; j < kCellsY; ++j) {
+          bool solid = (cellType_[i * n + j] == CellType::Solid);
+          if (solid || (i > 0 && cellType_[(i - 1) * n + j] == CellType::Solid)) {
+            u_[i * n + j] = prevU_[i * n + j];
+          }
+          if (solid || (j > 0 && cellType_[i * n + j - 1] == CellType::Solid)) {
+            v_[i * n + j] = prevV_[i * n + j];
+          }
+        }
+      }
+    }
+  }
+}
 void FlipFluid::updateParticleDensity() {}
 void FlipFluid::solveIncompressibility(int, float, float, bool) {}
 void FlipFluid::showParticles() {}
