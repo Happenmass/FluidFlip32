@@ -58,9 +58,22 @@ Scene::Scene() : xGravity_(0.0f), yGravity_(0.0f) {}
 
 void Scene::setup(int particles) {
   fluid_.reset();
-  // Seed particles in a hex-packed block in the upper-left of the visible area.
-  // Real implementation lands in Task 3 — for now, just record requested count.
-  fluid_.setNumParticles(particles);
+  const float r  = kParticleRadius;
+  const float dx = 2.0f * r;
+  const float dy = 1.7320508f * r;
+  int placed = 0;
+  for (int j = 0; placed < particles; ++j) {
+    float y = 1.0f + r + dy * j;
+    if (y > kCellsY - 1.0f - r) break;
+    for (int i = 0; placed < particles; ++i) {
+      float x = 1.0f + r + dx * i + (j % 2 == 0 ? 0.0f : r);
+      if (x > kCellsX - 1.0f - r) break;
+      fluid_.setParticlePos(placed, x, y);
+      fluid_.setParticleVel(placed, 0.0f, 0.0f);
+      ++placed;
+    }
+  }
+  fluid_.setNumParticles(placed);
   xGravity_ = 0.0f;
   yGravity_ = 0.0f;
 }

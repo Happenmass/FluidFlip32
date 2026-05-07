@@ -34,6 +34,16 @@ class FlipFluid {
     particleVel_[2 * i]     += dvx;
     particleVel_[2 * i + 1] += dvy;
   }
+  void setParticlePos(int i, float x, float y) {
+    particlePos_[2 * i]     = x;
+    particlePos_[2 * i + 1] = y;
+  }
+  void setParticleVel(int i, float vx, float vy) {
+    particleVel_[2 * i]     = vx;
+    particleVel_[2 * i + 1] = vy;
+  }
+  float particleVelX(int i) const { return particleVel_[2 * i]; }
+  float particleVelY(int i) const { return particleVel_[2 * i + 1]; }
 
   // Read-only cell type accessor for renderer feed.
   CellType cellType(int x, int y) const {
