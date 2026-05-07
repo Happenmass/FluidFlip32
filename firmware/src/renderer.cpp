@@ -3,18 +3,18 @@
 namespace fluidsim {
 
 // Density-tiered color palette (RGB565). Indexed by particle count per cell,
-// clamped at 4. Linearly blends from deep-blue background → cyan, with a
-// brighter highlight for compressed/dense regions. This gives the fluid the
-// "crystal clear seawater" look from ref.jpg: surface cells (count=1) read as
-// translucent, settled body (count=2-3) as cyan, splash cores (count≥4) bright.
+// clamped at 4. count=1 is the settled-body color (most common tier): clearly
+// cyan with only a hint of background. Higher counts add brightness, count≥4
+// gets a pale-white highlight for splash cores. count=0 stays bg so empty
+// cells in the fluid look like genuine air gaps.
 //
 // Computed with bg=(R=0, G=0, B=16/31), cyan=(R=0, G=63/63, B=31/31).
 constexpr uint16_t kDensityColors[5] = {
   0x0010,  // 0: deep blue background
-  0x0214,  // 1: ~25% cyan (translucent water surface)
-  0x03F8,  // 2: ~50% cyan (settled body)
-  0x05FB,  // 3: ~75% cyan
-  0x07FF,  // 4+: full cyan (compressed)
+  0x059A,  // 1: ~70% cyan (settled body — was 25%, far too translucent)
+  0x06BD,  // 2: ~85% cyan
+  0x07FF,  // 3: full cyan (compressed)
+  0x57FF,  // 4+: pale highlight (splash core, R=10/31 added)
 };
 
 Renderer::Renderer() : sprite_(&M5.Display), initialized_(false) {}
