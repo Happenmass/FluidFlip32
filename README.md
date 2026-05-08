@@ -7,6 +7,8 @@
 
 在 **M5StickC S3**（ESP32-S3 + 240×135 ST7789 LCD + BMI270 IMU + 两个按键）上跑一个实时**流体模拟**，把屏幕当作一个装着水的小容器：晃动设备 → IMU 读取重力方向 → 模拟出水的晃动、波纹、液面光影。
 
+![实机效果参考](assets/example.jpg)
+
 灵感与算法参考自 mitxela 的 FLIP 流体挂坠以及 Matthias Müller "Ten Minute Physics"。本仓库的 [flip-card/](flip-card/) 子目录是上游硬件参考工程（RP2350 + 自制 PCB），**只读参考、不要改动**。
 
 ## 二、目录结构（你只需要关心两个固件目录）
