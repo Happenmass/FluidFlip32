@@ -83,7 +83,10 @@ class Scene {
 
   // Public controls.
   void setGravity(float gx, float gy) { xGravity_ = gx; yGravity_ = gy; }
-  void applyRadialImpulse(float cx, float cy, float strength, float radius);
+  // Sets every particle's velocity to a fixed-magnitude vector pointing
+  // opposite to the current gravity direction. No-op when gravity is ~0
+  // (no clear "up").
+  void applyAntiGravityVelocity(float speed);
   void particleAdd(int delta, int maxCap);
   int  numParticles() const { return fluid_.numParticles(); }
 

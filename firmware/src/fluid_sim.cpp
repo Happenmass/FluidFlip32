@@ -389,16 +389,13 @@ void Scene::simulate() {
                   kPressureIters, kParticleIters, kOverRelaxation, true);
 }
 
-void Scene::applyRadialImpulse(float cx, float cy, float strength, float radius) {
+void Scene::applyAntiGravityVelocity(float speed) {
+  const float gMag = std::sqrt(xGravity_ * xGravity_ + yGravity_ * yGravity_);
+  if (gMag < 1e-3f) return;  // device flat → no clear "up", do nothing
+  const float vx = -xGravity_ / gMag * speed;
+  const float vy = -yGravity_ / gMag * speed;
   for (int i = 0; i < fluid_.numParticles(); ++i) {
-    float dx = fluid_.particlePosX(i) - cx;
-    float dy = fluid_.particlePosY(i) - cy;
-    float d  = std::sqrt(dx * dx + dy * dy);
-    if (d >= radius) continue;
-    float falloff = 1.0f - d / radius;
-    float invD    = 1.0f / std::max(d, 0.5f);
-    fluid_.addParticleVel(i, dx * invD * strength * falloff,
-                             dy * invD * strength * falloff);
+    fluid_.setParticleVel(i, vx, vy);
   }
 }
 void Scene::particleAdd(int delta, int maxCap) {

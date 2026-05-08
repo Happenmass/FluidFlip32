@@ -36,8 +36,7 @@ void loop() {
   gScene.setGravity(in.gravityX, in.gravityY);
 
   if (in.btnA_pressed) {
-    gScene.applyRadialImpulse(kImpulseCenterX, kImpulseCenterY,
-                              kImpulseStrength, kImpulseRadius);
+    gScene.applyAntiGravityVelocity(kAntiGravityVelocity);
   }
   if (in.btnB_long) {
     gScene.setup(kDefaultParticles);
